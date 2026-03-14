@@ -1,74 +1,67 @@
 import streamlit as st
 import pandas as pd
-import subprocess
-import tempfile
-import json
-import os
+from tableone import TableOne
 
-st.title("GTSummary Table Generator")
+st.title("Clinical Table 1 Generator")
+
+st.write("Upload dataset and generate descriptive statistics table")
 
 file = st.file_uploader("Upload Excel or CSV", type=["xlsx","csv"])
 
-if file:
+if file is not None:
 
+    # read dataset
     if file.name.endswith(".csv"):
         df = pd.read_csv(file)
     else:
         df = pd.read_excel(file)
 
-    st.subheader("Preview")
+    st.subheader("Data Preview")
     st.dataframe(df.head())
 
-    variables = st.multiselect("Select variables", df.columns)
+    # select variables
+    columns = st.multiselect("Select variables for table", df.columns)
 
-    datatype = {}
+    if columns:
 
-    if variables:
+        categorical = st.multiselect(
+            "Select categorical variables",
+            columns
+        )
 
-        st.subheader("Select variable type")
+        groupby = st.selectbox(
+            "Group by variable (optional)",
+            ["None"] + columns
+        )
 
-        for v in variables:
+        if st.button("Generate Table"):
 
-            datatype[v] = st.selectbox(
-                f"{v}",
-                ["continuous","categorical"],
-                key=v
-            )
+            if groupby == "None":
+                table = TableOne(
+                    df,
+                    columns=columns,
+                    categorical=categorical
+                )
+            else:
+                table = TableOne(
+                    df,
+                    columns=columns,
+                    categorical=categorical,
+                    groupby=groupby,
+                    pval=True
+                )
 
-    if st.button("Generate Table"):
+            st.subheader("Table 1")
+            st.write(table)
 
-        temp_dir = tempfile.mkdtemp()
+            # convert table to dataframe
+            table_df = table.tableone.reset_index()
 
-        data_path = os.path.join(temp_dir,"data.csv")
-        json_path = os.path.join(temp_dir,"vars.json")
-        output_doc = os.path.join(temp_dir,"table.docx")
-
-        df.to_csv(data_path,index=False)
-
-        config = {
-            "variables":variables,
-            "types":[datatype[v] for v in variables]
-        }
-
-        with open(json_path,"w") as f:
-            json.dump(config,f)
-
-        cmd = [
-            "Rscript",
-            "gtsummary_script.R",
-            data_path,
-            json_path,
-            output_doc
-        ]
-
-        subprocess.run(cmd)
-
-        st.success("Table Created")
-
-        with open(output_doc,"rb") as f:
+            csv = table_df.to_csv(index=False)
 
             st.download_button(
-                "Download Word Table",
-                f,
-                "gtsummary_table.docx"
+                "Download Table (CSV)",
+                csv,
+                "table1.csv",
+                "text/csv"
             )
