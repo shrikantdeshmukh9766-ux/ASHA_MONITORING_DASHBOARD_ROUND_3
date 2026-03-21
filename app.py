@@ -299,7 +299,7 @@ hr {
 # =====================
 TOKEN     = "23801d339dd6d16509a79250731f126401d5f7a3"
 BASE_URL  = "https://kobo.humanitarianresponse.info/api/v2"
-asset_uid = "auv4fwhA4rcKi5eFPU6XQj"
+asset_uid = "afik3gA9vpxDC2C5jbSY8C"
 
 # =====================
 # LOAD DATA
